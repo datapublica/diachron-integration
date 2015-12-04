@@ -33,7 +33,7 @@
         <dependency>
             <artifactId>archive-data-mapping</artifactId>
             <groupId>diachron-athena</groupId>
-            <version>1.0.1</version>
+            <version>2.0.0</version>
         </dependency>
         <dependency>
             <artifactId>common-http</artifactId>

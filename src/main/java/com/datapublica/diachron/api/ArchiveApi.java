@@ -5,7 +5,6 @@ import com.datapublica.diachron.service.data.DatasetVersion;
 import com.hp.hpl.jena.rdf.model.Model;
 import org.athena.imis.diachron.archive.datamapping.MultidimensionalConverter;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
 
@@ -88,7 +87,7 @@ public class ArchiveApi {
     String getChanges(@PathVariable String id, @RequestParam long from,
                       @RequestParam long to) throws IOException {
         final List<DatasetVersion> versions = service.getDatasetVersions(getId(id)).stream().filter(it -> it.date.compareTo(new Date(from)) >= 0 && it.date.compareTo(new Date(to)) <= 0).collect(Collectors.toList());
-        final Model changeSet = service.getChangeSet(versions.get(0).recordSet, versions.get(versions.size() - 1).recordSet);
+        final Model changeSet = service.getChangeSet("recordset/"+id, versions.get(0).recordSet, versions.get(versions.size() - 1).recordSet);
         return serializeModel(changeSet);
     }
 
@@ -97,7 +96,7 @@ public class ArchiveApi {
     String getChangesMeta(@PathVariable String id, @RequestParam long from,
                       @RequestParam long to) throws IOException {
         final List<DatasetVersion> versions = service.getDatasetVersions(getId(id)).stream().filter(it -> it.date.compareTo(new Date(from)) >= 0 && it.date.compareTo(new Date(to)) <= 0).collect(Collectors.toList());
-        final Model changeSet = service.getChangeSet(versions.get(0).id, versions.get(versions.size() - 1).id);
+        final Model changeSet = service.getChangeSet("schemaset/"+id, versions.get(0).id, versions.get(versions.size() - 1).id);
         return serializeModel(changeSet);
     }
 
