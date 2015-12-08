@@ -38,11 +38,11 @@ public class MetadataApi {
         color.setInstances("pink", "white", "brown", "black");
         Concept count = new Codelist("count", "Count", Concept.BasicType.INTEGER);
 
-        DatasetVersion version = new DatasetVersion("0", null, date(2015, 3, 3));
+        DatasetVersion version = new DatasetVersion("0", null, null, date(2015, 3, 3));
         version.addDimension(name).addDimension(color).addMeasure(count);
         animals.addVersion(version);
 
-        version = new DatasetVersion("1", null, date(2015, 9, 3));
+        version = new DatasetVersion("1", null, null, date(2015, 9, 3));
         color = new Codelist("color", "Color", Concept.BasicType.STRING);
         color.setInstances("red", "white", "brown", "black");
         version.addDimension(name).addDimension(color).addMeasure(count);

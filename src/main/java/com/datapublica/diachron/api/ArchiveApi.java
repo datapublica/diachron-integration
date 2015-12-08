@@ -2,7 +2,7 @@ package com.datapublica.diachron.api;
 
 import com.datapublica.diachron.service.ArchiveService;
 import com.datapublica.diachron.service.data.DatasetVersion;
-import com.hp.hpl.jena.rdf.model.Model;
+import com.hp.hpl.jena.rdf.model.*;
 import org.athena.imis.diachron.archive.datamapping.MultidimensionalConverter;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
@@ -11,8 +11,7 @@ import org.springframework.web.bind.annotation.*;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.util.Date;
-import java.util.List;
+import java.util.*;
 import java.util.stream.Collectors;
 
 /**
@@ -83,21 +82,19 @@ public class ArchiveApi {
     }
 
     @ResponseBody
-    @RequestMapping(value = "/{id}/data/changes", method = RequestMethod.GET, produces = "text/plain")
-    String getChanges(@PathVariable String id, @RequestParam long from,
+    @RequestMapping(value = "/{id}/data/changes", method = RequestMethod.GET)
+    Map<String, Integer> getChanges(@PathVariable String id, @RequestParam long from,
                       @RequestParam long to) throws IOException {
         final List<DatasetVersion> versions = service.getDatasetVersions(getId(id)).stream().filter(it -> it.date.compareTo(new Date(from)) >= 0 && it.date.compareTo(new Date(to)) <= 0).collect(Collectors.toList());
-        final Model changeSet = service.getChangeSet("recordset/"+id, versions.get(0).recordSet, versions.get(versions.size() - 1).recordSet);
-        return serializeModel(changeSet);
+        return service.getChangeSetStats("recordset/"+id, versions.get(0).recordSet, versions.get(versions.size() - 1).recordSet);
     }
 
     @ResponseBody
-    @RequestMapping(value = "/{id}/meta/changes", method = RequestMethod.GET, produces = "text/plain")
-    String getChangesMeta(@PathVariable String id, @RequestParam long from,
+    @RequestMapping(value = "/{id}/meta/changes", method = RequestMethod.GET)
+    Map<String, Integer> getChangesMeta(@PathVariable String id, @RequestParam long from,
                       @RequestParam long to) throws IOException {
         final List<DatasetVersion> versions = service.getDatasetVersions(getId(id)).stream().filter(it -> it.date.compareTo(new Date(from)) >= 0 && it.date.compareTo(new Date(to)) <= 0).collect(Collectors.toList());
-        final Model changeSet = service.getChangeSet("schemaset/"+id, versions.get(0).id, versions.get(versions.size() - 1).id);
-        return serializeModel(changeSet);
+        return service.getChangeSetStats("schemaset/"+id, versions.get(0).id, versions.get(versions.size() - 1).id);
     }
 
 
