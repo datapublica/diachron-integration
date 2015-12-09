@@ -25,9 +25,9 @@ import org.springframework.stereotype.Service;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.net.URI;
 import java.time.ZonedDateTime;
-import java.util.Date;
-import java.util.List;
+import java.util.*;
 import java.util.stream.Collectors;
 
 /**
@@ -118,11 +118,11 @@ public class ArchiveService {
         if (subjectRestrictionURI != null) {
             queryString = queryString.replace("?s", "<" + subjectRestrictionURI + ">");
         }
-        return query(queryString, "CONSTRUCT");
+        return query(queryString);
     }
 
     public Model getDatasetData(String datasetId, String dimensionRestrictionURI) throws IOException {
-        String queryString = "CONSTRUCT {?s ?p ?o} " +
+        return query("CONSTRUCT {?s ?p ?o} " +
                 "WHERE {{" +
                 "SELECT ?s ?p ?o FROM <" + RDFDictionary.getDictionaryNamedGraph() + "> " +
                 "WHERE " +
@@ -136,8 +136,7 @@ public class ArchiveService {
                 "}" +
                 "}" +
                 "}" +
-                "}";
-        return query(queryString, "CONSTRUCT");
+                "}");
     }
 
     private Model jsonResultsToModel(JsonNode results) {
@@ -166,6 +165,43 @@ public class ArchiveService {
         });
 
         return model;
+    }
+
+
+    private List<Map<String, Object>> jsonResultsToMap(JsonNode results) {
+        List<Map<String, Object>> res = new LinkedList<>();
+        for (JsonNode binding : results.path("results").path("bindings")) {
+            Map<String, Object> row = new HashMap<>();
+            res.add(row);
+            final Iterable<String> fields = binding::fieldNames;
+            for (String field : fields) {
+                final JsonNode valueNode = binding.get(field);
+                final String valueAsString = valueNode.get("value").asText();
+                Object value;
+                switch (valueNode.get("type").asText()) {
+                    case "uri":
+                        value = URI.create(valueAsString);
+                        break;
+                    case "typed-literal":
+                        String type = valueNode.get("datatype").asText();
+                        if (type.contains("integer")) {
+                            value = Integer.valueOf(valueAsString);
+                        } else if (type.contains("float") || type.contains("double")) {
+                            value = Double.valueOf(valueAsString);
+                        } else if (type.contains("bool") || type.contains("double")) {
+                            value = Boolean.valueOf(valueAsString);
+                        } else {
+                            value = valueAsString;
+                        }
+                        break;
+                    default:
+                        value = valueAsString;
+                }
+                row.put(field, value);
+            }
+        }
+
+        return res;
     }
 
     private JsonNode queryTemplate(String template, String... parameters) throws IOException {
@@ -203,13 +239,30 @@ public class ArchiveService {
     public Model getChangeSet(String datasetBaseURI, String newVersion, String oldVersion) throws IOException {
         String changeset = "http://www.diachron-fp7.eu/resource/" + datasetBaseURI + "/changes/" + oldVersion.replaceFirst(".*/([^/]*)$", "$1") + "-" + newVersion.replaceFirst(".*/([^/]*)$", "$1");
         String query = "CONSTRUCT {?s ?p ?o} WHERE {{" + "SELECT ?s ?p ?o FROM <" + changeset + "> WHERE {?s ?p ?o}}}";
-        return query(query, "CONSTRUCT");
+        return query(query);
     }
 
-    private Model query(String query, String queryType) throws IOException {
+    public Map<String, Integer> getChangeSetStats(String datasetBaseURI, String newVersion, String oldVersion) throws IOException {
+        String changeset = "http://www.diachron-fp7.eu/resource/" + datasetBaseURI + "/changes/" + oldVersion.replaceFirst(".*/([^/]*)$", "$1") + "-" + newVersion.replaceFirst(".*/([^/]*)$", "$1");
+        String query = "SELECT ?o (COUNT(?s) AS ?ns)\n" +
+                "FROM <"+changeset+">\n" +
+                "WHERE {?s a ?o}\n" +
+                "GROUP BY ?o\n" +
+                "ORDER BY DESC(?ns)";
+        return querySelect(query).stream().collect(Collectors.toMap(it -> it.get("o").toString().replace("http://www.diachron-fp7.eu/changes/", "").toUpperCase(), it -> (Integer) it.get("ns"), (a, b) -> a, LinkedHashMap::new));
+    }
+
+
+    private Model query(String query) throws IOException {
         HttpGet get = new HttpGet(config.getArchiveBaseUrl() + "/archive");
-        HttpUriRequestUtil.setParams(get, ImmutableMap.of("query", query, "queryType", queryType));
+        HttpUriRequestUtil.setParams(get, ImmutableMap.of("query", query, "queryType", "CONSTRUCT"));
         return jsonResultsToModel(fetch(get));
+    }
+
+    private List<Map<String, Object>> querySelect(String query) throws IOException {
+        HttpGet get = new HttpGet(config.getArchiveBaseUrl() + "/archive");
+        HttpUriRequestUtil.setParams(get, ImmutableMap.of("query", query, "queryType", "SELECT"));
+        return jsonResultsToMap(fetch(get));
     }
 
     private JsonNode fetch(HttpGet get) throws IOException {
