@@ -39,6 +39,11 @@ public class Difference {
         }
     }
 
+    public Object getProperty(String name) {
+        return properties.get(name);
+    }
+
+
     public Difference(Type type) {
         this.type = type;
     }
