@@ -53,18 +53,26 @@ public class ChangesApi {
 
         final CounterMap<Difference.Type> typeFacet = new CounterMap<>();
         facets.put("type", typeFacet);
-        changes.forEach(d -> typeFacet.put(d.getType(), 1L));
+        changes.forEach(d -> typeFacet.add(d.getType(), 1L));
 
         final CounterMap<String> measureFacet = new CounterMap<>();
         facets.put("measure", measureFacet);
         changes.stream().filter(d -> d.getType().getParameters().contains("measure"))
-                .forEach(d -> measureFacet.put((String)d.getProperties().get("measure"), 1L));
+                .forEach(d -> measureFacet.add((String)d.getProperties().get("measure"), 1L));
 
         final CounterMap<String> dimensionFacets = new CounterMap<>();
         facets.put("dimension", dimensionFacets);
         changes.stream().filter(d -> d.getType().getParameters().contains("dimension"))
-                .forEach(d -> measureFacet.put((String) d.getProperties().get("dimension"), 1L));
+                .forEach(d -> measureFacet.add((String) d.getProperties().get("dimension"), 1L));
 
+        // added and removed observations affect all dimensions or measures so add them all
+        /*
+        changes.stream().filter(d -> d.getType() == Difference.Type.ADD_OBSERVATION || d.getType() == Difference.Type.DELETE_OBSERVATION)
+                .forEach(d -> {
+                    measureFacet.put((String)d.getProperties().get("measure"), 1L);
+                    measureFacet.put((String)d.getProperties().get("dimension"), 1L);
+                });
+*/
         return facets;
     }
 
@@ -78,7 +86,8 @@ public class ChangesApi {
                    @RequestParam(value = "dimension", required = false) Set<String> dimension,
                    @RequestParam(value = "offset", required = false, defaultValue = "0") Integer offset,
                    @RequestParam(value = "limit", required = false, defaultValue = "10") Integer limit) throws IOException {
-        /*"Could not write content: java.lang.Integer cannot be cast to java.lang.Long (through reference chain: java.util.HashMap["facets"]->java.util.HashMap["type"]->com.datapublica.diachron.util.CounterMap["ATTACH_INSTANCE_TO_CODELIST"]); nested exception is com.fasterxml.jackson.databind.JsonMappingException: java.lang.Integer cannot be cast to java.lang.Long (through reference chain: java.util.HashMap["facets"]->java.util.HashMap["type"]->com.datapublica.diachron.util.CounterMap["ATTACH_INSTANCE_TO_CODELIST"])"
+        /*
+        "Could not write content: Null key for a Map not allowed in JSON (use a converting NullKeySerializer?); nested exception is com.fasterxml.jackson.core.JsonGenerationException: Null key for a Map not allowed in JSON (use a converting NullKeySerializer?)"
         final List<DatasetVersion> versions = service.getDatasetVersions(service.getDiachronicDSByName(id)).stream()
                 .filter(it -> it.date.compareTo(new Date(fromVersion)) >= 0 && it.date.compareTo(new Date(toVersion)) <= 0)
                 .collect(Collectors.toList());

@@ -54,7 +54,10 @@ public class ArchiveApi {
 
     @ResponseBody
     @RequestMapping(value = "/{id}/meta", method = RequestMethod.GET, produces = "text/plain")
-    String getValue(@PathVariable String id, @RequestParam(required = false) String objectType, @RequestParam(required = false) String objectId, @RequestParam(required = false) Long at) throws IOException {
+    String getValue(@PathVariable String id,
+                    @RequestParam(required = false) String objectType,
+                    @RequestParam(required = false) String objectId,
+                    @RequestParam(required = false) Long at) throws IOException {
         if (objectType == null && objectId != null || objectId == null && objectType != null) {
             throw new IllegalArgumentException("Cannot make objectType not null and objectId null (or the other way around)");
         }
@@ -100,7 +103,10 @@ public class ArchiveApi {
 
     @ResponseBody
     @RequestMapping(value = "/{id}/data", method = RequestMethod.GET, produces = "text/plain")
-    String getData(@PathVariable String id, @RequestParam(required = false) String dimensionType, @RequestParam(required = false) String dimensionObject, @RequestParam(required = false) Long at) throws IOException {
+    String getData(@PathVariable String id,
+                   @RequestParam(required = false) String dimensionType,
+                   @RequestParam(required = false) String dimensionObject,
+                   @RequestParam(required = false) Long at) throws IOException {
         if (dimensionType == null && dimensionObject != null || dimensionObject == null && dimensionType != null) {
             throw new IllegalArgumentException("Cannot make dimensionObject not null and dimensionType null (or the other way around)");
         }

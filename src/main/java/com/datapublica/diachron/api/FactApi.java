@@ -33,12 +33,16 @@ public class FactApi {
         addFact(versions[0], "bear", "black", 11);
         addFact(versions[0], "panther", "black", 3);
         addFact(versions[0], "panther", "white", 1);
+        addFact(versions[0], "sheep", "black", null);
+        addFact(versions[0], "sheep", "white", null);
 
         addFact(versions[0], "bear", "brown", 6);
-        addFact(versions[0], "bear", "white", 2);
+        addFact(versions[0], "bear", "white", null);
         addFact(versions[0], "bear", "black", 10);
         addFact(versions[0], "panther", "black", 3);
         addFact(versions[0], "panther", "white", 1);
+        addFact(versions[0], "sheep", "black", 11);
+        addFact(versions[0], "sheep", "white", 11);
         addFact(versions[1], "starfish", "black", 3);
         addFact(versions[1], "starfish", "red", 10);
 
@@ -51,6 +55,17 @@ public class FactApi {
         changes.add(new Difference(Difference.Type.DETACH_OBSERVATION_FROM_FT, "animals", "flamingo-white"));
         changes.add(new Difference(Difference.Type.DETACH_OBSERVATION_FROM_FT, "animals", "flamingo-pink"));
 
+        changes.add(new Difference(Difference.Type.DELETE_MEASURE_VALUE_FROM_OBSERVATION, "bear-white", "count"));
+        changes.add(new Difference(Difference.Type.ADD_MEASURE_VALUE_TO_OBSERVATION, "sheep-black", "count"));
+        changes.add(new Difference(Difference.Type.ADD_MEASURE_VALUE_TO_OBSERVATION, "sheep-white", "count"));
+        changes.add(new Difference(Difference.Type.ADD_OBSERVATION, "starfish-black"));
+        changes.add(new Difference(Difference.Type.ADD_OBSERVATION, "starfish-red"));
+        changes.add(new Difference(Difference.Type.DELETE_OBSERVATION, "flamingo-pink"));
+        changes.add(new Difference(Difference.Type.DELETE_OBSERVATION, "flamingo-white"));
+                //changes.add(new Difference(Difference.Type.ADD_UNKNOWN_PROPERTY: 17941,
+//                changes.add(new Difference(Difference.Type.ADD_GENERIC_VALUE_TO_OBSERVATION: 16682,
+        //changes.add(new Difference(Difference.Type.DELETE_UNKNOWN_PROPERTY: 31442,
+        //changes.add(new Difference(Difference.Type.DELETE_GENERIC_VALUE_FROM_OBSERVATION: 30679,
     }
 
     void addFact(Map<String, List> table, Object... values) {

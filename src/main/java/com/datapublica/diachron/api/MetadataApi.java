@@ -1,10 +1,12 @@
 package com.datapublica.diachron.api;
 
+import com.datapublica.diachron.service.ArchiveService;
 import com.datapublica.diachron.service.data.Codelist;
 import com.datapublica.diachron.service.data.Concept;
 import com.datapublica.diachron.service.data.Dataset;
 import com.datapublica.diachron.service.data.DatasetVersion;
 import org.jaxen.util.SingletonList;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -25,6 +27,9 @@ import java.util.Collection;
 public class MetadataApi {
 
     private Dataset animals;
+
+    @Autowired
+    private ArchiveService archive;
 
     @PostConstruct
     private void createFakeDataset() {
