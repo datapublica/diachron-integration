@@ -8,6 +8,7 @@ import java.util.Map;
  */
 public class ChangeSetResponse {
     private List<Difference> results;
+    private int total;
     private Facets facets;
 
     public List<Difference> getResults() {
@@ -24,6 +25,14 @@ public class ChangeSetResponse {
 
     public void setFacets(Facets facets) {
         this.facets = facets;
+    }
+
+    public int getTotal() {
+        return total;
+    }
+
+    public void setTotal(int total) {
+        this.total = total;
     }
 
     public static class Facets {
