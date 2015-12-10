@@ -3,7 +3,10 @@ package com.datapublica.diachron.service;
 import com.datapublica.common.http.DPHttpClient;
 import com.datapublica.common.http.util.HttpUriRequestUtil;
 import com.datapublica.diachron.config.DiachronConfig;
+import com.datapublica.diachron.service.data.ChangeSetQuery;
+import com.datapublica.diachron.service.data.ChangeSetResponse;
 import com.datapublica.diachron.service.data.DatasetVersion;
+import com.datapublica.diachron.service.data.Difference;
 import com.datapublica.diachron.util.StreamUtil;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.collect.ImmutableMap;
@@ -242,10 +245,74 @@ public class ArchiveService {
         return query(query);
     }
 
+    public ChangeSetResponse getChangeSetResult(String datasetBaseURI, String newVersion, String oldVersion, ChangeSetQuery query) throws IOException {
+        String changeset = "http://www.diachron-fp7.eu/resource/" + datasetBaseURI + "/changes/" + oldVersion.replaceFirst(".*/([^/]*)$", "$1") + "-" + newVersion.replaceFirst(".*/([^/]*)$", "$1");
+
+        final Difference.Type type = query.getType();
+        String conditions = "?change a ?type";
+        if (type != null) {
+            List<String> parameters = type.getParameters();
+            final int parameterSize = parameters.size();
+            for (int i = 1; i <= parameterSize; i++) {
+                conditions += "; co:"+type.getParameterId(i)+" ?p"+i;
+            }
+            conditions += ".\n";
+            conditions += "?change a co:" + type.getUriName() + ".\n";
+
+            for (Map.Entry<String, Object> entry : query.getProperties().entrySet()) {
+                final String property = entry.getKey();
+                final String parameterId = type.getParameterId(type.getParameterIdFromName(property));
+                conditions += "?change co:" + parameterId + " ";
+                final Object value = entry.getValue();
+                if (value.toString().startsWith("http://")) {
+                    conditions += "<" + value + ">.\n";
+                } else {
+                    conditions += "\"" + value + "\".\n";
+                }
+            }
+
+
+            if (query.getJoinType() != null) {
+
+            }
+        } else {
+            conditions += ".\n";
+        }
+
+        String prefix = "PREFIX co: <http://www.diachron-fp7.eu/changes/>\n";
+        final String queryByType = prefix+"SELECT ?type (COUNT(?change) AS ?ns) FROM <" + changeset + "> WHERE {" + conditions + "} GROUP BY ?type ORDER BY DESC(?ns)";
+        Map<Difference.Type, Long> byType = querySelect(queryByType).stream().collect(Collectors.toMap(it -> Difference.Type.fromUri(it.get("type")), it -> ((Number) it.get("ns")).longValue(), (a, b) -> a, LinkedHashMap::new));
+        final ChangeSetResponse.Facets facets = new ChangeSetResponse.Facets();
+        facets.setTypes(byType);
+        final Long count = byType.values().stream().collect(Collectors.reducing(Long::sum)).orElse(0L);
+        final ChangeSetResponse response = new ChangeSetResponse();
+        response.setTotal(count);
+        response.setFacets(facets);
+
+        if (type != null) {
+            List<String> parameters = type.getParameters();
+            final int parameterSize = parameters.size();
+            for (int i = 1; i <= parameterSize; i++) {
+                String param = parameters.get(i-1);
+
+                String p = "p"+i;
+                String queryStr = prefix+"SELECT ?" + p + " (COUNT(?change) AS ?ns) FROM <" + changeset + "> WHERE {" + conditions + "} GROUP BY ?" + p + " ORDER BY DESC(?ns) LIMIT 20";
+
+                List<Map<String, Object>> results = querySelect(queryStr);
+                facets.getParameters().put(param, results
+                        .stream().collect(Collectors.toMap(it -> it.get(p).toString(), it -> ((Number) it.get("ns")).longValue(), (a, b) -> a, LinkedHashMap::new)));
+            }
+            String queryStr = prefix+"SELECT ?type ?p1 ?p2 ?p3 FROM <" + changeset + "> WHERE {" + conditions + "} LIMIT 20";
+            response.setResults(querySelect(queryStr).stream().map(map -> new Difference(Difference.Type.fromUri(map.get("type")), map.get("p1"), map.get("p2"), map.get("p3"))).collect(Collectors.toList()));
+        }
+
+        return response;
+    }
+
     public Map<String, Integer> getChangeSetStats(String datasetBaseURI, String newVersion, String oldVersion) throws IOException {
         String changeset = "http://www.diachron-fp7.eu/resource/" + datasetBaseURI + "/changes/" + oldVersion.replaceFirst(".*/([^/]*)$", "$1") + "-" + newVersion.replaceFirst(".*/([^/]*)$", "$1");
         String query = "SELECT ?o (COUNT(?s) AS ?ns)\n" +
-                "FROM <"+changeset+">\n" +
+                "FROM <" + changeset + ">\n" +
                 "WHERE {?s a ?o}\n" +
                 "GROUP BY ?o\n" +
                 "ORDER BY DESC(?ns)";

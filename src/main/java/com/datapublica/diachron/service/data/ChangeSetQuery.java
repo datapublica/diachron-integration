@@ -8,6 +8,13 @@ public class ChangeSetQuery {
     private Map<String, Object> properties = new HashMap<>();
     private Difference.Type joinType;
 
+    public ChangeSetQuery(Difference.Type type) {
+        this.type = type;
+    }
+
+    public ChangeSetQuery() {
+    }
+
     public Difference.Type getType() {
         return type;
     }

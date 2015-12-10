@@ -34,7 +34,7 @@ public class Difference {
 
     public Difference(Type type, Object... values) {
         this.type = type;
-        for (int i = 0; i < values.length; i++) {
+        for (int i = 0; i < values.length && i < type.getParameters().size(); i++) {
             properties.put(type.getParameters().get(i), values[i]);
         }
     }
@@ -142,6 +142,10 @@ public class Difference {
 
         public String getParameterId(int id) {
             return parameterBaseName+"_p"+id;
+        }
+
+        public static Type fromUri(Object uri) {
+            return valueOf(uri.toString().replace("http://www.diachron-fp7.eu/changes/", "").toUpperCase());
         }
     }
 

@@ -1,5 +1,6 @@
 package com.datapublica.diachron.service.data;
 
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -8,7 +9,7 @@ import java.util.Map;
  */
 public class ChangeSetResponse {
     private List<Difference> results;
-    private int total;
+    private long total;
     private Facets facets;
 
     public List<Difference> getResults() {
@@ -27,17 +28,17 @@ public class ChangeSetResponse {
         this.facets = facets;
     }
 
-    public int getTotal() {
+    public long getTotal() {
         return total;
     }
 
-    public void setTotal(int total) {
+    public void setTotal(long total) {
         this.total = total;
     }
 
     public static class Facets {
         private Map<Difference.Type, Long> types;
-        private Map<String, Map<String, Long>> parameters;
+        private Map<String, Map<String, Long>> parameters = new LinkedHashMap<>();
         private Map<Difference.Type, Long> joinTypes;
 
         public Map<Difference.Type, Long> getJoinTypes() {

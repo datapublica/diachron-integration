@@ -1,7 +1,10 @@
 package com.datapublica.diachron.api;
 
 import com.datapublica.diachron.service.ArchiveService;
+import com.datapublica.diachron.service.data.ChangeSetQuery;
+import com.datapublica.diachron.service.data.ChangeSetResponse;
 import com.datapublica.diachron.service.data.DatasetVersion;
+import com.datapublica.diachron.service.data.Difference;
 import com.hp.hpl.jena.rdf.model.*;
 import org.athena.imis.diachron.archive.datamapping.MultidimensionalConverter;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -86,18 +89,20 @@ public class ArchiveApi {
 
     @ResponseBody
     @RequestMapping(value = "/{id}/data/changes", method = RequestMethod.GET)
-    Map<String, Integer> getChanges(@PathVariable String id, @RequestParam long from,
-                      @RequestParam long to) throws IOException {
+    ChangeSetResponse getChanges(@PathVariable String id, @RequestParam long from,
+                      @RequestParam long to,
+                      @RequestParam(required = false) Difference.Type type) throws IOException {
         final List<DatasetVersion> versions = service.getDatasetVersions(getId(id)).stream().filter(it -> it.date.compareTo(new Date(from)) >= 0 && it.date.compareTo(new Date(to)) <= 0).collect(Collectors.toList());
-        return service.getChangeSetStats("recordset/"+id, versions.get(0).recordSet, versions.get(versions.size() - 1).recordSet);
+        return service.getChangeSetResult("recordset/"+id, versions.get(0).recordSet, versions.get(versions.size() - 1).recordSet, new ChangeSetQuery(type));
     }
 
     @ResponseBody
     @RequestMapping(value = "/{id}/meta/changes", method = RequestMethod.GET)
-    Map<String, Integer> getChangesMeta(@PathVariable String id, @RequestParam long from,
-                      @RequestParam long to) throws IOException {
+    ChangeSetResponse getChangesMeta(@PathVariable String id, @RequestParam long from,
+                                     @RequestParam long to,
+                                     @RequestParam(required = false) Difference.Type type) throws IOException {
         final List<DatasetVersion> versions = service.getDatasetVersions(getId(id)).stream().filter(it -> it.date.compareTo(new Date(from)) >= 0 && it.date.compareTo(new Date(to)) <= 0).collect(Collectors.toList());
-        return service.getChangeSetStats("schemaset/"+id, versions.get(0).id, versions.get(versions.size() - 1).id);
+        return service.getChangeSetResult("schemaset/"+id, versions.get(0).recordSet, versions.get(versions.size() - 1).recordSet, new ChangeSetQuery(type));
     }
 
 
