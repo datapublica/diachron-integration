@@ -273,10 +273,13 @@ public class ArchiveService {
 
 
             if (query.getJoinType() != null) {
-
+                throw new IllegalStateException("Not implemented yet");
             }
         } else {
             conditions += ".\n";
+            if (query.getJoinType() != null || !query.getProperties().isEmpty()) {
+                throw new IllegalStateException("Not implemented yet");
+            }
         }
 
         String prefix = "PREFIX co: <http://www.diachron-fp7.eu/changes/>\n";
