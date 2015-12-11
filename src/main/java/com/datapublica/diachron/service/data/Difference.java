@@ -1,7 +1,5 @@
 package com.datapublica.diachron.service.data;
 
-import org.obolibrary.oboformat.diff.Diff;
-
 import java.util.*;
 
 /**
