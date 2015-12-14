@@ -31,6 +31,10 @@ public class ChangeSetQuery {
         this.properties = properties;
     }
 
+    public void setProperty(String name, Object value) {
+        this.properties.put(name, value);
+    }
+
     public Difference.Type getJoinType() {
         return joinType;
     }

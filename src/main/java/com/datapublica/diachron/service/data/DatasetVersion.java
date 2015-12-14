@@ -16,6 +16,9 @@ public class DatasetVersion {
     private List<Concept> dimensions = new ArrayList<>();
     public List<Concept> measures = new ArrayList<>();
 
+    /* temporary, for inspection */
+    private Object rdf;
+
     public DatasetVersion() {
     }
 
@@ -50,5 +53,13 @@ public class DatasetVersion {
     public DatasetVersion addMeasure(Concept c) {
         this.measures.add(c);
         return this;
+    }
+
+    public Object getModel() {
+        return rdf;
+    }
+
+    public void setModel(Object model) {
+        this.rdf = model;
     }
 }
