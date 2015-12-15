@@ -142,8 +142,8 @@ public class MetadataApi {
     public ChangeSetResponse search(@PathVariable String name,
                                     @RequestParam (value = "fromVersion", required = false) String fromVersion,
                                     @RequestParam (value = "toVersion", required = false) String toVersion,
-                                    @RequestParam(value = "offset", required = false, defaultValue = "0") Integer offset,
-                                    @RequestParam(value = "limit", required = false, defaultValue = "10") Integer limit,
+                                    @RequestParam(value = "p", required = false, defaultValue = "0") Integer offset,
+                                    @RequestParam(value = "s", required = false, defaultValue = "10") Integer limit,
                                     @RequestBody Map<String, Object> filter) throws IOException {
         /*
         "Could not write content: Null key for a Map not allowed in JSON (use a converting NullKeySerializer?); nested exception is com.fasterxml.jackson.core.JsonGenerationException: Null key for a Map not allowed in JSON (use a converting NullKeySerializer?)"
@@ -173,7 +173,7 @@ public class MetadataApi {
 
         if (filter != null) {
             for (Map.Entry<String, Object> entry : filter.entrySet()) {
-                if ("type".equals(entry.getKey())) {
+                if ("types".equals(entry.getKey())) {
                     query.setType(Difference.Type.valueOf(entry.getValue().toString()));
                 } else {
                     query.setProperty(entry.getKey(), entry.getValue());
