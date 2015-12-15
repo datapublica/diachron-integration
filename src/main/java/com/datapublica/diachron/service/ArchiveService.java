@@ -25,6 +25,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.web.bind.annotation.PathVariable;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -41,6 +42,7 @@ public class ArchiveService {
     private static final Logger log = LoggerFactory.getLogger(ArchiveService.class);
 
     public static final String DICTIONARY = "http://www.diachron-fp7.eu/archive/dictionary";
+    public static final String RESOURCE_BASE_URI = "http://www.diachron-fp7.eu/resource/";
 
     public static final String BASE_PUBLICATION_URI = "http://www.data-publica.com/lod/publication/";
 
@@ -170,7 +172,6 @@ public class ArchiveService {
         return model;
     }
 
-
     private List<Map<String, Object>> jsonResultsToMap(JsonNode results) {
         List<Map<String, Object>> res = new LinkedList<>();
         for (JsonNode binding : results.path("results").path("bindings")) {
@@ -240,14 +241,13 @@ public class ArchiveService {
     }
 
     public Model getChangeSet(String datasetBaseURI, String newVersion, String oldVersion) throws IOException {
-        String changeset = "http://www.diachron-fp7.eu/resource/" + datasetBaseURI + "/changes/" + oldVersion.replaceFirst(".*/([^/]*)$", "$1") + "-" + newVersion.replaceFirst(".*/([^/]*)$", "$1");
+        String changeset = RESOURCE_BASE_URI + datasetBaseURI + "/changes/" + oldVersion.replaceFirst(".*/([^/]*)$", "$1") + "-" + newVersion.replaceFirst(".*/([^/]*)$", "$1");
         String query = "CONSTRUCT {?s ?p ?o} WHERE {{" + "SELECT ?s ?p ?o FROM <" + changeset + "> WHERE {?s ?p ?o}}}";
         return query(query);
     }
 
     public ChangeSetResponse getChangeSetResult(String datasetBaseURI, String newVersion, String oldVersion, ChangeSetQuery query) throws IOException {
-        String changeset = "http://www.diachron-fp7.eu/resource/" + datasetBaseURI + "/changes/" + oldVersion.replaceFirst(".*/([^/]*)$", "$1") + "-" + newVersion.replaceFirst(".*/([^/]*)$", "$1");
-
+        String changeset = RESOURCE_BASE_URI + datasetBaseURI + "/changes/" + oldVersion.replaceFirst(".*/([^/]*)$", "$1") + "-" + newVersion.replaceFirst(".*/([^/]*)$", "$1");
         final Difference.Type type = query.getType();
         String conditions = "?change a ?type";
         if (type != null) {
@@ -317,7 +317,7 @@ public class ArchiveService {
     }
 
     public Map<String, Integer> getChangeSetStats(String datasetBaseURI, String newVersion, String oldVersion) throws IOException {
-        String changeset = "http://www.diachron-fp7.eu/resource/" + datasetBaseURI + "/changes/" + oldVersion.replaceFirst(".*/([^/]*)$", "$1") + "-" + newVersion.replaceFirst(".*/([^/]*)$", "$1");
+        String changeset = RESOURCE_BASE_URI + datasetBaseURI + "/changes/" + oldVersion.replaceFirst(".*/([^/]*)$", "$1") + "-" + newVersion.replaceFirst(".*/([^/]*)$", "$1");
         String query = "SELECT ?o (COUNT(?s) AS ?ns)\n" +
                 "FROM <" + changeset + ">\n" +
                 "WHERE {?s a ?o}\n" +
@@ -346,4 +346,40 @@ public class ArchiveService {
         }
         return json.get("data");
     }
+
+    public Model getDatasetMetaData(String id, Long at, String restrictionId) throws IOException {
+        return getDatasetMetaData(getFit(id, at).id, restrictionId);
+    }
+
+    public DatasetVersion getFit(String id, Long atTimestamp) throws IOException {
+        final List<DatasetVersion> datasets = getDatasetVersions(id);
+        final DatasetVersion latestEntry = datasets.get(0);
+        if (atTimestamp == null)
+            return latestEntry;
+        Date at = new Date(atTimestamp);
+        // If at is over the latest version, then take the latest version
+        if (at.compareTo(latestEntry.date) >= 0)
+            return latestEntry;
+        final DatasetVersion firstEntry = datasets.get(datasets.size() - 1);
+
+        // If at is below the first version, take the first version (could be an error)
+        if (at.compareTo(firstEntry.date) <= 0)
+            return firstEntry;
+
+        // Else get the first entry that is below atee
+        return datasets.stream().filter(it -> it.date.compareTo(at) < 0).findFirst().get();
+    }
+
+    public String serializeModel(Model model) {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        model.write(out, "N3");
+        return out.toString();
+    }
+
+    public String serializeModel(Model model, String format) {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        model.write(out, format);
+        return out.toString();
+    }
+
 }

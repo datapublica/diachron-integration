@@ -64,27 +64,8 @@ public class ArchiveApi {
         if (objectType == null && objectId != null || objectId == null && objectType != null) {
             throw new IllegalArgumentException("Cannot make objectType not null and objectId null (or the other way around)");
         }
-        Model model = service.getDatasetMetaData(getFit(id, at).id, service.getConceptUri(objectType, objectId));
-        return serializeModel(model);
-    }
-
-    private DatasetVersion getFit(String id, Long atTimestamp) throws IOException {
-        final List<DatasetVersion> datasets = getDatasets(id);
-        final DatasetVersion latestEntry = datasets.get(0);
-        if (atTimestamp == null)
-            return latestEntry;
-        Date at = new Date(atTimestamp);
-        // If at is over the latest version, then take the latest version
-        if (at.compareTo(latestEntry.date) >= 0)
-            return latestEntry;
-        final DatasetVersion firstEntry = datasets.get(datasets.size() - 1);
-
-        // If at is below the first version, take the first version (could be an error)
-        if (at.compareTo(firstEntry.date) <= 0)
-            return firstEntry;
-
-        // Else get the first entry that is below atee
-        return datasets.stream().filter(it -> it.date.compareTo(at) < 0).findFirst().get();
+        Model model = service.getDatasetMetaData(getId(id), at, service.getConceptUri(objectType, objectId));
+        return service.serializeModel(model);
     }
 
     @ResponseBody
@@ -93,7 +74,7 @@ public class ArchiveApi {
                       @RequestParam long to,
                       @RequestParam(required = false) Difference.Type type) throws IOException {
         final List<DatasetVersion> versions = service.getDatasetVersions(getId(id)).stream().filter(it -> it.date.compareTo(new Date(from)) >= 0 && it.date.compareTo(new Date(to)) <= 0).collect(Collectors.toList());
-        return service.getChangeSetResult("recordset/"+id, versions.get(0).recordSet, versions.get(versions.size() - 1).recordSet, new ChangeSetQuery(type));
+        return service.getChangeSetResult("recordset/" + id, versions.get(0).recordSet, versions.get(versions.size() - 1).recordSet, new ChangeSetQuery(type));
     }
 
     @ResponseBody
@@ -102,7 +83,7 @@ public class ArchiveApi {
                                      @RequestParam long to,
                                      @RequestParam(required = false) Difference.Type type) throws IOException {
         final List<DatasetVersion> versions = service.getDatasetVersions(getId(id)).stream().filter(it -> it.date.compareTo(new Date(from)) >= 0 && it.date.compareTo(new Date(to)) <= 0).collect(Collectors.toList());
-        return service.getChangeSetResult("schemaset/"+id, versions.get(0).schemaSet, versions.get(versions.size() - 1).schemaSet, new ChangeSetQuery(type));
+        return service.getChangeSetResult("schemaset/" + id, versions.get(0).recordSet, versions.get(versions.size() - 1).recordSet, new ChangeSetQuery(type));
     }
 
 
@@ -115,14 +96,8 @@ public class ArchiveApi {
         if (dimensionType == null && dimensionObject != null || dimensionObject == null && dimensionType != null) {
             throw new IllegalArgumentException("Cannot make dimensionObject not null and dimensionType null (or the other way around)");
         }
-
-        Model model = service.getDatasetData(getFit(id, at).id, service.getConceptUri(dimensionType, dimensionObject));
-        return serializeModel(model);
+        Model model = service.getDatasetData(service.getFit(getId(id), at).id, service.getConceptUri(dimensionType, dimensionObject));
+        return service.serializeModel(model);
     }
 
-    private String serializeModel(Model model) {
-        ByteArrayOutputStream out = new ByteArrayOutputStream();
-        model.write(out, "N3");
-        return out.toString();
-    }
 }
