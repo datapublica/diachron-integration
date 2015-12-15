@@ -102,7 +102,7 @@ public class ArchiveApi {
                                      @RequestParam long to,
                                      @RequestParam(required = false) Difference.Type type) throws IOException {
         final List<DatasetVersion> versions = service.getDatasetVersions(getId(id)).stream().filter(it -> it.date.compareTo(new Date(from)) >= 0 && it.date.compareTo(new Date(to)) <= 0).collect(Collectors.toList());
-        return service.getChangeSetResult("schemaset/"+id, versions.get(0).recordSet, versions.get(versions.size() - 1).recordSet, new ChangeSetQuery(type));
+        return service.getChangeSetResult("schemaset/"+id, versions.get(0).schemaSet, versions.get(versions.size() - 1).schemaSet, new ChangeSetQuery(type));
     }
 
 

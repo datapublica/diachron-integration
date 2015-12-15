@@ -271,9 +271,8 @@ public class ArchiveService {
                 }
             }
 
-
             if (query.getJoinType() != null) {
-                throw new IllegalStateException("Not implemented yet");
+                conditions += "?change co:"+type.getParameterId(1)+" ?join. ?change_join a co:"+query.getJoinType().getUriName()+" ; co:"+query.getJoinType().getParameterId(1)+" ?join. FILTER(STRENDS(str(?unknown_p1), \"_p1\").\n";
             }
         } else {
             conditions += ".\n";
@@ -283,7 +282,7 @@ public class ArchiveService {
         }
 
         String prefix = "PREFIX co: <http://www.diachron-fp7.eu/changes/>\n";
-        final String queryByType = prefix+"SELECT ?type (COUNT(?change) AS ?ns) FROM <" + changeset + "> WHERE {" + conditions + "} GROUP BY ?type ORDER BY DESC(?ns)";
+        final String queryByType = prefix+"SELECT ?type (COUNT(DISTINCT ?change) AS ?ns) FROM <" + changeset + "> WHERE {" + conditions + "} GROUP BY ?type ORDER BY DESC(?ns)";
         Map<Difference.Type, Long> byType = querySelect(queryByType).stream().collect(Collectors.toMap(it -> Difference.Type.fromUri(it.get("type")), it -> ((Number) it.get("ns")).longValue(), (a, b) -> a, LinkedHashMap::new));
         final ChangeSetResponse.Facets facets = new ChangeSetResponse.Facets();
         facets.setTypes(byType);
@@ -299,13 +298,18 @@ public class ArchiveService {
                 String param = parameters.get(i-1);
 
                 String p = "p"+i;
-                String queryStr = prefix+"SELECT ?" + p + " (COUNT(?change) AS ?ns) FROM <" + changeset + "> WHERE {" + conditions + "} GROUP BY ?" + p + " ORDER BY DESC(?ns) LIMIT 20";
+                String queryStr = prefix+"SELECT ?" + p + " (COUNT(DISTINCT ?change) AS ?ns) FROM <" + changeset + "> WHERE {" + conditions + "} GROUP BY ?" + p + " ORDER BY DESC(?ns) LIMIT 20";
 
                 List<Map<String, Object>> results = querySelect(queryStr);
                 facets.getParameters().put(param, results
                         .stream().collect(Collectors.toMap(it -> it.get(p).toString(), it -> ((Number) it.get("ns")).longValue(), (a, b) -> a, LinkedHashMap::new)));
             }
-            String queryStr = prefix+"SELECT ?type ?p1 ?p2 ?p3 FROM <" + changeset + "> WHERE {" + conditions + "} LIMIT 20";
+            String queryStr = prefix+"SELECT ?type_join (COUNT(DISTINCT ?change_join) AS ?ns) FROM <" + changeset + "> WHERE {" + conditions + " ?change co:"+type.getParameterId(1)+" ?join. ?change_join a ?type_join ; ?unknown_p1 ?join. FILTER(?type != ?type_join && STRENDS(str(?unknown_p1), \"_p1\"))} GROUP BY ?type_join ORDER BY DESC(?ns) LIMIT 20";
+
+            facets.setJoinTypes(querySelect(queryStr)
+                    .stream().collect(Collectors.toMap(it -> Difference.Type.fromUri(it.get("type_join")), it -> ((Number) it.get("ns")).longValue(), (a, b) -> a, LinkedHashMap::new)));
+
+            queryStr = prefix+"SELECT ?type ?p1 ?p2 ?p3 FROM <" + changeset + "> WHERE {" + conditions + "} LIMIT 20";
             response.setResults(querySelect(queryStr).stream().map(map -> new Difference(Difference.Type.fromUri(map.get("type")), map.get("p1"), map.get("p2"), map.get("p3"))).collect(Collectors.toList()));
         }
 
