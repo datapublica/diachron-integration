@@ -3,10 +3,7 @@ package com.datapublica.diachron.service;
 import com.datapublica.common.http.DPHttpClient;
 import com.datapublica.common.http.util.HttpUriRequestUtil;
 import com.datapublica.diachron.config.DiachronConfig;
-import com.datapublica.diachron.service.data.ChangeSetQuery;
-import com.datapublica.diachron.service.data.ChangeSetResponse;
-import com.datapublica.diachron.service.data.DatasetVersion;
-import com.datapublica.diachron.service.data.Difference;
+import com.datapublica.diachron.service.data.*;
 import com.datapublica.diachron.util.StreamUtil;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.collect.ImmutableMap;
@@ -25,7 +22,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-import org.springframework.web.bind.annotation.PathVariable;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -250,11 +246,12 @@ public class ArchiveService {
         String changeset = RESOURCE_BASE_URI + datasetBaseURI + "/changes/" + oldVersion.replaceFirst(".*/([^/]*)$", "$1") + "-" + newVersion.replaceFirst(".*/([^/]*)$", "$1");
         final Difference.Type type = query.getType();
         String conditions = "?change a ?type";
+        Set<String> uris = new HashSet<>();
         if (type != null) {
             List<String> parameters = type.getParameters();
             final int parameterSize = parameters.size();
             for (int i = 1; i <= parameterSize; i++) {
-                conditions += "; co:"+type.getParameterId(i)+" ?p"+i;
+                conditions += "; co:" + type.getParameterId(i) + " ?p" + i;
             }
             conditions += ".\n";
             conditions += "?change a co:" + type.getUriName() + ".\n";
@@ -272,7 +269,7 @@ public class ArchiveService {
             }
 
             if (query.getJoinType() != null) {
-                conditions += "?change co:"+type.getParameterId(1)+" ?join. ?change_join a co:"+query.getJoinType().getUriName()+" ; co:"+query.getJoinType().getParameterId(1)+" ?join. FILTER(STRENDS(str(?unknown_p1), \"_p1\").\n";
+                conditions += "?change_join a co:" + query.getJoinType().getUriName() + " ; co:" + query.getJoinType().getParameterId(1) + " ?p1.\n";
             }
         } else {
             conditions += ".\n";
@@ -282,7 +279,7 @@ public class ArchiveService {
         }
 
         String prefix = "PREFIX co: <http://www.diachron-fp7.eu/changes/>\n";
-        final String queryByType = prefix+"SELECT ?type (COUNT(DISTINCT ?change) AS ?ns) FROM <" + changeset + "> WHERE {" + conditions + "} GROUP BY ?type ORDER BY DESC(?ns)";
+        final String queryByType = prefix + "SELECT ?type (COUNT(DISTINCT ?change) AS ?ns) FROM <" + changeset + "> WHERE {" + conditions + "} GROUP BY ?type ORDER BY DESC(?ns)";
         Map<Difference.Type, Long> byType = querySelect(queryByType).stream().collect(Collectors.toMap(it -> Difference.Type.fromUri(it.get("type")), it -> ((Number) it.get("ns")).longValue(), (a, b) -> a, LinkedHashMap::new));
         final ChangeSetResponse.Facets facets = new ChangeSetResponse.Facets();
         facets.setTypes(byType);
@@ -295,25 +292,105 @@ public class ArchiveService {
             List<String> parameters = type.getParameters();
             final int parameterSize = parameters.size();
             for (int i = 1; i <= parameterSize; i++) {
-                String param = parameters.get(i-1);
+                String param = parameters.get(i - 1);
 
-                String p = "p"+i;
-                String queryStr = prefix+"SELECT ?" + p + " (COUNT(DISTINCT ?change) AS ?ns) FROM <" + changeset + "> WHERE {" + conditions + "} GROUP BY ?" + p + " ORDER BY DESC(?ns) LIMIT 20";
+                String p = "p" + i;
+                String queryStr = prefix + "SELECT ?" + p + " (COUNT(DISTINCT ?change) AS ?ns) FROM <" + changeset + "> WHERE {" + conditions + "} GROUP BY ?" + p + " ORDER BY DESC(?ns) LIMIT 20";
 
                 List<Map<String, Object>> results = querySelect(queryStr);
                 facets.getParameters().put(param, results
-                        .stream().collect(Collectors.toMap(it -> it.get(p).toString(), it -> ((Number) it.get("ns")).longValue(), (a, b) -> a, LinkedHashMap::new)));
+                        .stream().peek(it -> {
+                            String pValue = it.get(p).toString();
+                            if (pValue.startsWith("http")) uris.add(pValue);
+                        }).collect(Collectors.toMap(it -> it.get(p).toString(), it -> ((Number) it.get("ns")).longValue(), (a, b) -> a, LinkedHashMap::new)));
             }
-            String queryStr = prefix+"SELECT ?type_join (COUNT(DISTINCT ?change_join) AS ?ns) FROM <" + changeset + "> WHERE {" + conditions + " ?change co:"+type.getParameterId(1)+" ?join. ?change_join a ?type_join ; ?unknown_p1 ?join. FILTER(?type != ?type_join && STRENDS(str(?unknown_p1), \"_p1\"))} GROUP BY ?type_join ORDER BY DESC(?ns) LIMIT 20";
+            String queryStr = prefix + "SELECT ?type_join (COUNT(DISTINCT ?change) AS ?ns) FROM <" + changeset + "> WHERE {" + conditions + " ?change co:" + type.getParameterId(1) + " ?join. ?change_join a ?type_join ; ?unknown_p1 ?join. FILTER(?type != ?type_join && STRENDS(str(?unknown_p1), \"_p1\"))} GROUP BY ?type_join ORDER BY DESC(?ns) LIMIT 20";
 
             facets.setJoinTypes(querySelect(queryStr)
                     .stream().collect(Collectors.toMap(it -> Difference.Type.fromUri(it.get("type_join")), it -> ((Number) it.get("ns")).longValue(), (a, b) -> a, LinkedHashMap::new)));
 
-            queryStr = prefix+"SELECT ?type ?p1 ?p2 ?p3 FROM <" + changeset + "> WHERE {" + conditions + "} LIMIT 20";
+            queryStr = prefix + "SELECT ?change ?type ?p1 ?p2 ?p3 FROM <" + changeset + "> WHERE {" + conditions + "} ORDER BY ?change OFFSET " + (query.getPage() * 20) + " LIMIT 20";
             response.setResults(querySelect(queryStr).stream().map(map -> new Difference(Difference.Type.fromUri(map.get("type")), map.get("p1"), map.get("p2"), map.get("p3"))).collect(Collectors.toList()));
         }
 
+        response.setResolved(resolveURIs(oldVersion, newVersion, uris));
         return response;
+    }
+
+    private Map<String, DifferenceValue> resolveURIs(String oldVersion, String newVersion, Set<String> uris) throws IOException {
+        Map<String, DifferenceValue> result = new HashMap<>();
+        for (String uri : uris) {
+            if (uri.startsWith("http://www.data-publica.com/lod/")) {
+                // DP concepts
+                if (uri.endsWith("-measure")) {
+                    insertIfNotNull(result, uri, resolveURI(oldVersion, newVersion,
+                            "<" + uri + "> rdfs:range ?range. OPTIONAL { <" + uri + "> diachron:codelist ?codelist}",
+                            true));
+                } else if (uri.endsWith("-concept")) {
+                } else if (uri.endsWith("-dim")) {
+                    insertIfNotNull(result, uri, resolveURI(oldVersion, newVersion,
+                            "<" + uri + "> rdfs:range ?range. OPTIONAL { <" + uri + "> diachron:codelist ?codelist}",
+                            true));
+                } else if (uri.endsWith("-codelist")) {
+                } else if (uri.endsWith("-obs")) {
+                } else if (uri.contains("-value-")) {
+                } else {
+                    log.warn("Unknown uri to resolve <" + uri + ">... ignoring");
+                }
+            } else if (uri.startsWith("http://www.diachron-fp7.eu/resource/Record/")) {
+                // Diachron Record
+                if (uri.endsWith("-obs")) {
+
+                } else {
+                    log.warn("Unknown uri to resolve <" + uri + ">... ignoring");
+                }
+            } else {
+                log.warn("Unknown uri to resolve <" + uri + ">... ignoring");
+            }
+        }
+        return result;
+    }
+
+    private static void insertIfNotNull(Map<String, DifferenceValue> result, String uri, DifferenceValue obj) {
+        if (obj == null) return;
+        result.put(uri, obj);
+    }
+
+    private DifferenceValue<Map<String, Object>> resolveURI(String beforeGraph, String afterGraph, String query, boolean schemaset) throws IOException {
+        if (schemaset) {
+            beforeGraph = beforeGraph.replace("recordset", "schemaset");
+            afterGraph = afterGraph.replace("recordset", "schemaset");
+        } else {
+            beforeGraph = beforeGraph.replace("schemaset", "recordset");
+            afterGraph = afterGraph.replace("schemaset", "recordset");
+        }
+        String prefix = "PREFIX co: <http://www.diachron-fp7.eu/changes/>\n" +
+                "PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>\n" +
+                "PREFIX diachron: <http://www.diachron-fp7.eu/resource/>\n" +
+                "PREFIX qb: <http://purl.org/linked-data/cube#>\n";
+        String queryStr = prefix+"SELECT * {\n" +
+                "        { GRAPH <" + beforeGraph + "> {\n BIND (\"before\" as ?before)\n" +
+                "            " + query + "\n" +
+                "        }}\n" +
+                "    UNION \n" +
+                "        { GRAPH <" + afterGraph + "> {\n BIND (\"after\" as ?before)\n" +
+                "            " + query + "\n" +
+                "        }}\n" +
+                "}\n" +
+                "ORDER BY ?before";
+        Map<String, Object> before = null;
+        Map<String, Object> after = null;
+        for (Map<String, Object> map : querySelect(queryStr)) {
+            if (map.get("before").equals("before")) {
+                before = map;
+            } else {
+                after = map;
+            }
+            map.remove("before");
+        }
+        if (before == null && after == null) return null;
+
+        return new DifferenceValue(before, after);
     }
 
     public Map<String, Integer> getChangeSetStats(String datasetBaseURI, String newVersion, String oldVersion) throws IOException {
