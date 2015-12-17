@@ -186,24 +186,35 @@ public class ArchiveService {
                         break;
                     case "typed-literal":
                         String type = valueNode.get("datatype").asText();
-                        if (type.contains("integer")) {
-                            value = Integer.valueOf(valueAsString);
-                        } else if (type.contains("float") || type.contains("double")) {
-                            value = Double.valueOf(valueAsString);
-                        } else if (type.contains("bool") || type.contains("double")) {
-                            value = Boolean.valueOf(valueAsString);
+                        value = getTypedValue(valueAsString, type);
+                        break;
+                    default:
+                        if (valueAsString.contains("^^")) {
+                            String[] typedLiteral = valueAsString.split("\\^\\^");
+                            value = getTypedValue(typedLiteral[0], typedLiteral[1]);
                         } else {
                             value = valueAsString;
                         }
-                        break;
-                    default:
-                        value = valueAsString;
                 }
                 row.put(field, value);
             }
         }
 
         return res;
+    }
+
+    private Object getTypedValue(String valueAsString, String type) {
+        Object value;
+        if (type.contains("integer")) {
+            value = Integer.valueOf(valueAsString);
+        } else if (type.contains("float") || type.contains("double")) {
+            value = Double.valueOf(valueAsString);
+        } else if (type.contains("bool") || type.contains("double")) {
+            value = Boolean.valueOf(valueAsString);
+        } else {
+            value = valueAsString;
+        }
+        return value;
     }
 
     private JsonNode queryTemplate(String template, String... parameters) throws IOException {
@@ -312,7 +323,9 @@ public class ArchiveService {
                     .stream().collect(Collectors.toMap(it -> Difference.Type.fromUri(it.get("type_join")), it -> ((Number) it.get("ns")).longValue(), (a, b) -> a, LinkedHashMap::new)));
 
             queryStr = prefix + "SELECT ?change ?type ?p1 ?p2 ?p3 FROM <" + changeset + "> WHERE {" + conditions + "} ORDER BY ?change OFFSET " + (query.getPage() * 20) + " LIMIT 20";
-            response.setResults(querySelect(queryStr).stream().map(map -> new Difference(Difference.Type.fromUri(map.get("type")), map.get("p1"), map.get("p2"), map.get("p3"))).collect(Collectors.toList()));
+            response.setResults(querySelect(queryStr).stream().map(map -> new Difference(Difference.Type.fromUri(map.get("type")), map.get("p1"), map.get("p2"), map.get("p3"))).peek(diff -> {
+                diff.getProperties().values().stream().map(Object::toString).filter(it -> it.startsWith("http")).forEach(uris::add);
+            }).collect(Collectors.toList()));
         }
 
         response.setResolved(resolveURIs(oldVersion, newVersion, uris));
@@ -327,22 +340,26 @@ public class ArchiveService {
                 if (uri.endsWith("-measure")) {
                     insertIfNotNull(result, uri, resolveURI(oldVersion, newVersion,
                             "<" + uri + "> rdfs:range ?range. OPTIONAL { <" + uri + "> diachron:codelist ?codelist}",
-                            true));
+                            true, false));
                 } else if (uri.endsWith("-concept")) {
                 } else if (uri.endsWith("-dim")) {
                     insertIfNotNull(result, uri, resolveURI(oldVersion, newVersion,
                             "<" + uri + "> rdfs:range ?range. OPTIONAL { <" + uri + "> diachron:codelist ?codelist}",
-                            true));
+                            true, false));
                 } else if (uri.endsWith("-codelist")) {
-                } else if (uri.endsWith("-obs")) {
                 } else if (uri.contains("-value-")) {
+                    insertIfNotNull(result, uri, resolveURI(oldVersion, newVersion,
+                            "<" + uri + "> <http://www.w3.org/2004/02/skos/core#notation> ?notation ; <http://www.w3.org/2004/02/skos/core#prefLabel> ?label.",
+                            true, false));
                 } else {
                     log.warn("Unknown uri to resolve <" + uri + ">... ignoring");
                 }
             } else if (uri.startsWith("http://www.diachron-fp7.eu/resource/Record/")) {
                 // Diachron Record
                 if (uri.endsWith("-obs")) {
-
+                    insertIfNotNull(result, uri, resolveURI(oldVersion, newVersion,
+                            "<" + uri + "> diachron:hasRecordAttribute ?rc. ?rc diachron:object ?o ; diachron:predicate ?p. FILTER (strstarts(str(?p), \"http://www.data-publica.com/lod/\")) ",
+                            false, true));
                 } else {
                     log.warn("Unknown uri to resolve <" + uri + ">... ignoring");
                 }
@@ -358,7 +375,7 @@ public class ArchiveService {
         result.put(uri, obj);
     }
 
-    private DifferenceValue<Map<String, Object>> resolveURI(String beforeGraph, String afterGraph, String query, boolean schemaset) throws IOException {
+    private DifferenceValue<Map<String, Object>> resolveURI(String beforeGraph, String afterGraph, String query, boolean schemaset, boolean keyvalue) throws IOException {
         if (schemaset) {
             beforeGraph = beforeGraph.replace("recordset", "schemaset");
             afterGraph = afterGraph.replace("recordset", "schemaset");
@@ -383,16 +400,59 @@ public class ArchiveService {
         Map<String, Object> before = null;
         Map<String, Object> after = null;
         for (Map<String, Object> map : querySelect(queryStr)) {
-            if (map.get("before").equals("before")) {
-                before = map;
+            boolean isBefore = map.get("before").equals("before");
+            if (keyvalue) {
+                Map<String, Object> target;
+                if (isBefore) {
+                    if (before == null) before = new HashMap<>();
+                    target = before;
+                } else {
+                    if (after == null) after = new HashMap<>();
+                    target = after;
+                }
+                String p = cleanUriString(map.get("p")).toString();
+                Object o = cleanUriString(map.get("o"));
+                o = o == null ? map.get("o") : o;
+                target.put(p, o);
             } else {
-                after = map;
+                if (isBefore) {
+                    before = map;
+                } else {
+                    after = map;
+                }
             }
             map.remove("before");
         }
         if (before == null && after == null) return null;
 
+        cleanUriMap(before);
+        cleanUriMap(after);
+
         return new DifferenceValue(before, after);
+    }
+
+    private void cleanUriMap(Map<String, Object> map) {
+        if (map == null) return;
+        for (String entry : map.keySet()) {
+            Object input = map.get(entry);
+            Object newValue = cleanUriString(input);
+            if (newValue != null)
+                map.put(entry, newValue);
+        }
+    }
+
+    private Object cleanUriString(Object input) {
+        if (input == null) return null;
+        String o = input.toString();
+        Object newValue = null;
+        if (o.startsWith("http")) {
+            o = o.replaceFirst(".*/([^/]*)$", "$1");
+            if (o.startsWith("XMLSchema")) {
+                o = o.replaceFirst(".*#([^#]*)$", "$1");
+            }
+            newValue = o;
+        }
+        return newValue;
     }
 
     public Map<String, Integer> getChangeSetStats(String datasetBaseURI, String newVersion, String oldVersion) throws IOException {
