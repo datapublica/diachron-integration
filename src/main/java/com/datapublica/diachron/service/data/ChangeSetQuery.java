@@ -7,9 +7,15 @@ public class ChangeSetQuery {
     private Difference.Type type;
     private Map<String, Object> properties = new HashMap<>();
     private Difference.Type joinType;
+    private int page = 0;
 
     public ChangeSetQuery(Difference.Type type) {
         this.type = type;
+    }
+
+    public ChangeSetQuery(Difference.Type type, Difference.Type joinType) {
+        this.type = type;
+        this.joinType = joinType;
     }
 
     public ChangeSetQuery() {
@@ -41,5 +47,13 @@ public class ChangeSetQuery {
 
     public void setJoinType(Difference.Type joinType) {
         this.joinType = joinType;
+    }
+
+    public int getPage() {
+        return page;
+    }
+
+    public void setPage(int page) {
+        this.page = page;
     }
 }

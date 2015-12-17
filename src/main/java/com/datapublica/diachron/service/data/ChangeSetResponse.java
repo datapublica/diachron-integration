@@ -8,6 +8,7 @@ import java.util.Map;
  * Created by loic on 10/12/2015.
  */
 public class ChangeSetResponse {
+    private Map<String, DifferenceValue> resolved;
     private List<Difference> results;
     private long total;
     private Facets facets;
@@ -34,6 +35,14 @@ public class ChangeSetResponse {
 
     public void setTotal(long total) {
         this.total = total;
+    }
+
+    public Map<String, DifferenceValue> getResolved() {
+        return resolved;
+    }
+
+    public void setResolved(Map<String, DifferenceValue> resolved) {
+        this.resolved = resolved;
     }
 
     public static class Facets {
