@@ -519,4 +519,39 @@ public class ArchiveService {
         return out.toString();
     }
 
+    public ChangeSetResponse searchChanges(String name,
+                                    boolean schema, // false: data, true: schema
+                                    String fromVersion,
+                                    String toVersion,
+                                    Integer offset,
+                                    Integer limit,
+                                    Map<String, Object> filter) throws IOException {
+        ChangeSetQuery query  = new ChangeSetQuery();
+
+        if (filter != null) {
+            for (Map.Entry<String, Object> entry : filter.entrySet()) {
+                if ("types".equals(entry.getKey())) {
+                    query.setType(Difference.Type.valueOf(entry.getValue().toString()));
+                } else if ("joinTypes".equals(entry.getKey())) {
+                    query.setJoinType(Difference.Type.valueOf(entry.getValue().toString()));
+                } else {
+                    query.setProperty(entry.getKey(), entry.getValue());
+                }
+            }
+        }
+
+        String id = getDiachronicDSByName(name);
+
+        List<DatasetVersion> versions = getDatasetVersions(id);
+        if (fromVersion == null) {
+            fromVersion = versions.get(0).recordSet;
+        }
+        if (toVersion == null) {
+            toVersion = versions.get(versions.size()-1).recordSet;
+        }
+
+        return getChangeSetResult((schema ? "schemaset/" : "recordset/") + name, fromVersion, toVersion, query);
+    }
+
+
 }

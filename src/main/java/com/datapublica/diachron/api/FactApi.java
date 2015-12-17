@@ -1,11 +1,13 @@
 package com.datapublica.diachron.api;
 
-import com.datapublica.diachron.service.data.Difference;
+import com.datapublica.diachron.service.data.*;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
 
 import javax.annotation.PostConstruct;
 import java.io.IOException;
+import java.time.LocalDate;
+import java.time.ZoneOffset;
 import java.util.*;
 
 /**
@@ -19,10 +21,30 @@ public class FactApi {
 
     Map<String, List>[] versions = new Map[2];
     List<Difference> changes = new ArrayList<>();
-
+    private Dataset animals;
 
     @PostConstruct
     public void createFakeFacts() {
+        this.animals = new Dataset();
+        animals.setUri("animals");
+        animals.setName("Animals");
+        animals.setCreationDate(date(2015, 3, 3));
+
+        Concept name = new Concept("name", "Name", Concept.BasicType.STRING);
+        Codelist color = new Codelist("color", "Color", Concept.BasicType.STRING);
+        color.setInstances("pink", "white", "brown", "black");
+        Concept count = new Codelist("count", "Count", Concept.BasicType.INTEGER);
+
+        DatasetVersion version = new DatasetVersion("0", null, null, date(2015, 3, 3));
+        version.addDimension(name).addDimension(color).addMeasure(count);
+        animals.addVersion(version);
+
+        version = new DatasetVersion("1", null, null, date(2015, 9, 3));
+        color = new Codelist("color", "Color", Concept.BasicType.STRING);
+        color.setInstances("red", "white", "brown", "black");
+        version.addDimension(name).addDimension(color).addMeasure(count);
+        animals.addVersion(version);
+
         versions[0] = new HashMap<>();
         versions[1] = new HashMap<>();
 
@@ -82,5 +104,9 @@ public class FactApi {
     @RequestMapping(value = "/{datasetId}/{version}/{factTableId}/{factId}/{column}", method = RequestMethod.GET, produces = "text/plain")
     public Collection aggregateCount(@PathVariable String datasetId, @PathVariable Integer version, @PathVariable String factTableId, @PathVariable String factId, @PathVariable String column) throws IOException {
         return versions[version].values();
+    }
+
+    private java.util.Date date(int year, int month, int dayOfMonth) {
+        return Date.from(LocalDate.of(year, month, dayOfMonth).atStartOfDay().toInstant(ZoneOffset.UTC));
     }
 }
