@@ -72,18 +72,20 @@ public class ArchiveApi {
     @RequestMapping(value = "/{id}/data/changes", method = RequestMethod.GET)
     ChangeSetResponse getChanges(@PathVariable String id, @RequestParam long from,
                       @RequestParam long to,
-                      @RequestParam(required = false) Difference.Type type) throws IOException {
+                      @RequestParam(required = false) Difference.Type type,
+                                 @RequestParam(required = false) Difference.Type joinType) throws IOException {
         final List<DatasetVersion> versions = service.getDatasetVersions(getId(id)).stream().filter(it -> it.date.compareTo(new Date(from)) >= 0 && it.date.compareTo(new Date(to)) <= 0).collect(Collectors.toList());
-        return service.getChangeSetResult("recordset/" + id, versions.get(0).recordSet, versions.get(versions.size() - 1).recordSet, new ChangeSetQuery(type));
+        return service.getChangeSetResult("recordset/" + id, versions.get(0).recordSet, versions.get(versions.size() - 1).recordSet, new ChangeSetQuery(type, joinType));
     }
 
     @ResponseBody
     @RequestMapping(value = "/{id}/meta/changes", method = RequestMethod.GET)
     ChangeSetResponse getChangesMeta(@PathVariable String id, @RequestParam long from,
                                      @RequestParam long to,
-                                     @RequestParam(required = false) Difference.Type type) throws IOException {
+                                     @RequestParam(required = false) Difference.Type type,
+                                     @RequestParam(required = false) Difference.Type joinType) throws IOException {
         final List<DatasetVersion> versions = service.getDatasetVersions(getId(id)).stream().filter(it -> it.date.compareTo(new Date(from)) >= 0 && it.date.compareTo(new Date(to)) <= 0).collect(Collectors.toList());
-        return service.getChangeSetResult("schemaset/" + id, versions.get(0).recordSet, versions.get(versions.size() - 1).recordSet, new ChangeSetQuery(type));
+        return service.getChangeSetResult("schemaset/" + id, versions.get(0).recordSet, versions.get(versions.size() - 1).recordSet, new ChangeSetQuery(type, joinType));
     }
 
 
