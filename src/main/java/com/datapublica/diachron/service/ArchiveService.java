@@ -8,6 +8,8 @@ import com.datapublica.diachron.util.StreamUtil;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.collect.ImmutableMap;
 import com.hp.hpl.jena.rdf.model.*;
+import org.apache.commons.collections4.MultiMap;
+import org.apache.commons.collections4.map.MultiValueMap;
 import org.apache.http.HttpEntity;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPost;
@@ -368,7 +370,7 @@ public class ArchiveService {
                 "PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>\n" +
                 "PREFIX diachron: <http://www.diachron-fp7.eu/resource/>\n" +
                 "PREFIX qb: <http://purl.org/linked-data/cube#>\n";
-        String queryStr = prefix+"SELECT * {\n" +
+        String queryStr = prefix + "SELECT * {\n" +
                 "        { GRAPH <" + beforeGraph + "> {\n BIND (\"before\" as ?before)\n" +
                 "            " + query + "\n" +
                 "        }}\n" +
@@ -460,13 +462,13 @@ public class ArchiveService {
     }
 
     public ChangeSetResponse searchChanges(String name,
-                                    boolean schema, // false: data, true: schema
-                                    String fromVersion,
-                                    String toVersion,
-                                    Integer offset,
-                                    Integer limit,
-                                    Map<String, Object> filter) throws IOException {
-        ChangeSetQuery query  = new ChangeSetQuery();
+                                           boolean schema, // false: data, true: schema
+                                           String fromVersion,
+                                           String toVersion,
+                                           Integer offset,
+                                           Integer limit,
+                                           Map<String, Object> filter) throws IOException {
+        ChangeSetQuery query = new ChangeSetQuery();
 
         if (filter != null) {
             for (Map.Entry<String, Object> entry : filter.entrySet()) {
@@ -487,11 +489,33 @@ public class ArchiveService {
             fromVersion = versions.get(0).recordSet;
         }
         if (toVersion == null) {
-            toVersion = versions.get(versions.size()-1).recordSet;
+            toVersion = versions.get(versions.size() - 1).recordSet;
         }
 
-        return getChangeSetResult((schema ? "schemaset/" : "recordset/") + name, fromVersion, toVersion, query);
+        ChangeSetResponse response = getChangeSetResult((schema ? "schemaset/" : "recordset/") + name, fromVersion, toVersion, query);
+
+        // processing excludes
+        MultiMap<String, Object> excludes = schema ? schemaChangeExcludes : dataChangeExcludes;
+        response.getFacets().getParameters().forEach((key, value) -> {
+            List val = (List)excludes.get(key);
+            if (val != null) {
+                val.forEach(v -> value.remove(v));
+            }
+        });
+
+        return response;
     }
 
+    private MultiMap<String, Object> schemaChangeExcludes = new MultiValueMap<>();
+    private MultiMap<String, Object> dataChangeExcludes = new MultiValueMap<>();
+
+    public void hideChanges(String name, boolean schema, // false: data, true: schema
+                            Map<String, Object> properties) throws IOException {
+
+        MultiMap<String, Object> excludes = schema ? schemaChangeExcludes : dataChangeExcludes;
+        excludes.putAll(properties);
+        //todo add real implementation
+        return;
+    }
 
 }

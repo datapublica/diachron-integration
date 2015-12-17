@@ -89,14 +89,32 @@ public class ChangesApi {
     @ResponseBody
     @RequestMapping(value = "/{name}/data", method = RequestMethod.POST, produces = "application/json")
     public ChangeSetResponse searchDataChanges(@PathVariable String name,
-                                    @RequestParam (value = "fromVersion", required = false) String fromVersion,
-                                    @RequestParam (value = "toVersion", required = false) String toVersion,
-                                    @RequestParam(value = "p", required = false, defaultValue = "0") Integer offset,
-                                    @RequestParam(value = "s", required = false, defaultValue = "10") Integer limit,
-                                    @RequestBody Map<String, Object> filter) throws IOException {
+                                               @RequestParam (value = "fromVersion", required = false) String fromVersion,
+                                               @RequestParam (value = "toVersion", required = false) String toVersion,
+                                               @RequestParam(value = "p", required = false, defaultValue = "0") Integer offset,
+                                               @RequestParam(value = "s", required = false, defaultValue = "10") Integer limit,
+                                               @RequestBody Map<String, Object> filter) throws IOException {
         return archive.searchChanges(name, false,
                 fromVersion, toVersion, offset, limit,
                 filter);
+    }
+
+
+    @ResponseBody
+    @RequestMapping(value = "/{name}/data", method = RequestMethod.DELETE, produces = "application/json")
+    public void hideDataTuple(@PathVariable String name, @RequestParam String key, @RequestParam String value) throws IOException {
+        Map<String, Object> m = new HashMap<>();
+        m.put(key, value);
+        archive.hideChanges(name, false, m);
+    }
+
+
+    @ResponseBody
+    @RequestMapping(value = "/{name}/meta", method = RequestMethod.DELETE, produces = "application/json")
+    public void hideMetaTuple(@PathVariable String name, @RequestParam String key, @RequestParam String value) throws IOException {
+        Map<String, Object> m = new HashMap<>();
+        m.put(key, value);
+        archive.hideChanges(name, true, m);
     }
 
 }
