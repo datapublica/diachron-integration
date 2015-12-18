@@ -552,7 +552,7 @@ public class ArchiveService {
             toVersion = versions.get(versions.size() - 1).recordSet;
         }
 
-        ChangeSetResponse response = getChangeSetResult((schema ? "schemaset/" : "recordset/") + name, fromVersion, toVersion, query);
+        final ChangeSetResponse response = getChangeSetResult((schema ? "schemaset/" : "recordset/") + name, fromVersion, toVersion, query);
 
         // processing excludes
         MultiMap<String, Object> excludes = schema ? schemaChangeExcludes : dataChangeExcludes;
@@ -562,20 +562,31 @@ public class ArchiveService {
                 val.forEach(v -> value.remove(v));
             }
         });
+            changeTypeExcludes.forEach(val -> {
+                response.getFacets().getTypes().remove(val);
+                if (response.getFacets().getJoinTypes() != null) {
+                    response.getFacets().getJoinTypes().remove(val);
+                }
+            });
 
         return response;
     }
 
     private MultiMap<String, Object> schemaChangeExcludes = new MultiValueMap<>();
     private MultiMap<String, Object> dataChangeExcludes = new MultiValueMap<>();
+    private Set<Difference.Type> changeTypeExcludes = EnumSet.noneOf(Difference.Type.class);
 
-    public void hideChanges(String name, boolean schema, // false: data, true: schema
-                            Map<String, Object> properties) throws IOException {
-
+    public void hideChangeProperties(String name, boolean schema, // false: data, true: schema
+                                     Map<String, Object> properties) throws IOException {
         MultiMap<String, Object> excludes = schema ? schemaChangeExcludes : dataChangeExcludes;
         excludes.putAll(properties);
         //todo add real implementation
         return;
+    }
+
+
+    public void hideChangeType(Difference.Type type) throws IOException {
+        changeTypeExcludes.add(type);
     }
 
 }

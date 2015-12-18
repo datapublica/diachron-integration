@@ -105,7 +105,11 @@ public class ChangesApi {
     public void hideDataTuple(@PathVariable String name, @RequestParam String key, @RequestParam String value) throws IOException {
         Map<String, Object> m = new HashMap<>();
         m.put(key, value);
-        archive.hideChanges(name, false, m);
+        if ("type".equals(key)) {
+            archive.hideChangeType(Difference.Type.valueOf(value));
+        } else {
+            archive.hideChangeProperties(name, false, m);
+        }
     }
 
 
@@ -114,7 +118,11 @@ public class ChangesApi {
     public void hideMetaTuple(@PathVariable String name, @RequestParam String key, @RequestParam String value) throws IOException {
         Map<String, Object> m = new HashMap<>();
         m.put(key, value);
-        archive.hideChanges(name, true, m);
+        if ("type".equals(key)) {
+            archive.hideChangeType(Difference.Type.valueOf(value));
+        } else {
+            archive.hideChangeProperties(name, true, m);
+        }
     }
 
 }
