@@ -10,6 +10,7 @@ import com.google.common.collect.ImmutableMap;
 import com.hp.hpl.jena.rdf.model.*;
 import org.apache.commons.collections4.MultiMap;
 import org.apache.commons.collections4.map.MultiValueMap;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.http.HttpEntity;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPost;
@@ -465,6 +466,26 @@ public class ArchiveService {
         return querySelect(query).stream().collect(Collectors.toMap(it -> it.get("o").toString().replace("http://www.diachron-fp7.eu/changes/", "").toUpperCase(), it -> (Integer) it.get("ns"), (a, b) -> a, LinkedHashMap::new));
     }
 
+    public List getDatasetStructure(String schemaSetURI) throws IOException {
+        //String dataset = RESOURCE_BASE_URI + "/schemaset/" + datasetBaseURI;
+        String prefix = "PREFIX co: <http://www.diachron-fp7.eu/changes/>\n" +
+                "PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>\n" +
+                "PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>\n" +
+                "PREFIX diachron: <http://www.diachron-fp7.eu/resource/>\n";
+        String query = prefix + "SELECT ?concept ?type ?range\n" +
+                "FROM <"+ schemaSetURI + "> " +
+                "WHERE {?ft a diachron:FactTable ; ?type ?concept. OPTIONAL {?concept rdfs:range ?range} " +
+                "FILTER (?type != rdf:type)}";
+        return querySelect(query);
+                /*
+                .stream()
+                .map(s -> {
+                    String[] a = StringUtils.split((String)s, "\\s+");
+                    return new Concept(a[0], a[1], a[2]);
+                })
+                .collect(Collectors.toMap(it -> it.get("o").toString().replace("http://www.diachron-fp7.eu/changes/", "").toUpperCase(), it -> (Integer) it.get("ns"), (a, b) -> a, LinkedHashMap::new));
+                */
+    }
 
     private Model query(String query) throws IOException {
         HttpGet get = new HttpGet(config.getArchiveBaseUrl() + "/archive");

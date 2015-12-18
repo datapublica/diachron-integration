@@ -12,7 +12,7 @@ public class Concept {
     public BasicType type;
 
     public static enum BasicType {
-        STRING, INTEGER, DECIMAL
+        STRING, INTEGER, DECIMAL, ENUM
     }
 
     public Concept() {

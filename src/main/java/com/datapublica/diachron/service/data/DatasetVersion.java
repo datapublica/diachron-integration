@@ -1,8 +1,10 @@
 package com.datapublica.diachron.service.data;
 
+import java.net.URI;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+import java.util.Map;
 
 /**
  *
@@ -59,7 +61,29 @@ public class DatasetVersion {
         return rdf;
     }
 
-    public void setModel(Object model) {
-        this.rdf = model;
+    public void setSchema(List schema) {
+        for (Object o : schema) {
+            Map<String, URI> m = (Map)o;
+            Concept c = new Concept();
+            c.uri = m.get("concept").toString();
+
+            URI range = m.get("range");
+            if (range != null) {
+                if (range.toString().endsWith("#string")) {
+                    c.type = Concept.BasicType.STRING;
+                } else if (range.toString().endsWith("#integer")) {
+                    c.type = Concept.BasicType.INTEGER;
+                } else {
+                    c.type = Concept.BasicType.ENUM;
+                }
+            }
+
+            URI type = m.get("type");
+            if (type != null && type.toString().endsWith("hasDimension")) {
+                dimensions.add(c);
+            } else {
+                measures.add(c);
+            }
+        }
     }
 }

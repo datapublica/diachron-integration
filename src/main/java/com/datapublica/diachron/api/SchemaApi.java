@@ -43,8 +43,8 @@ public class SchemaApi {
         result.setUri(shortenId(id));
         result.setVersions(archive.getDatasetVersions(id).stream().map(v -> {
             try {
-                v.setModel(getModel(id));
-            } catch (IOException e) {
+                v.setSchema(archive.getDatasetStructure(v.schemaSet));
+            } catch (Exception e) {
                 e.printStackTrace();
             }
             v.id = shortenId(v.id);
