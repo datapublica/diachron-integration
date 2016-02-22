@@ -143,7 +143,7 @@ public class ArchiveService {
                 "}");
     }
 
-    private Model jsonResultsToModel(JsonNode results) {
+    protected Model jsonResultsToModel(JsonNode results) {
         Model model = ModelFactory.createDefaultModel();
         results.fields().forEachRemaining(statement -> {
             Resource subject = model.createResource(statement.getKey());
@@ -171,7 +171,7 @@ public class ArchiveService {
         return model;
     }
 
-    private List<Map<String, Object>> jsonResultsToMap(JsonNode results) {
+    protected List<Map<String, Object>> jsonResultsToMap(JsonNode results) {
         List<Map<String, Object>> res = new LinkedList<>();
         for (JsonNode binding : results.path("results").path("bindings")) {
             Map<String, Object> row = new HashMap<>();
@@ -240,7 +240,7 @@ public class ArchiveService {
         return http.execute(post).json().get("data").asText();
     }
 
-    private String fetchOne(HttpUriRequest get, String field) throws IOException {
+    protected String fetchOne(HttpUriRequest get, String field) throws IOException {
         JsonNode json = http.execute(get).json();
         JsonNode binding = json.get("data").get("results").get("bindings");
         if (binding.size() != 1) {
@@ -487,19 +487,19 @@ public class ArchiveService {
                 */
     }
 
-    private Model query(String query) throws IOException {
+    protected Model query(String query) throws IOException {
         HttpGet get = new HttpGet(config.getArchiveBaseUrl() + "/archive");
         HttpUriRequestUtil.setParams(get, ImmutableMap.of("query", query, "queryType", "CONSTRUCT"));
         return jsonResultsToModel(fetch(get));
     }
 
-    private List<Map<String, Object>> querySelect(String query) throws IOException {
+    protected List<Map<String, Object>> querySelect(String query) throws IOException {
         HttpGet get = new HttpGet(config.getArchiveBaseUrl() + "/archive");
         HttpUriRequestUtil.setParams(get, ImmutableMap.of("query", query, "queryType", "SELECT"));
         return jsonResultsToMap(fetch(get));
     }
 
-    private JsonNode fetch(HttpGet get) throws IOException {
+    protected JsonNode fetch(HttpGet get) throws IOException {
         final JsonNode json = http.execute(get).json();
         if (!json.get("success").asBoolean()) {
             throw new IllegalStateException("Could not complete query: " + json.get("message").asText());
@@ -530,13 +530,13 @@ public class ArchiveService {
         return datasets.stream().filter(it -> it.date.compareTo(at) < 0).findFirst().get();
     }
 
-    public String serializeModel(Model model) {
+    public static String serializeModel(Model model) {
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         model.write(out, "N3");
         return out.toString();
     }
 
-    public String serializeModel(Model model, String format) {
+    public static String serializeModel(Model model, String format) {
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         model.write(out, format);
         return out.toString();

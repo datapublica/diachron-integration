@@ -46,7 +46,7 @@ public class Difference {
         this.type = type;
     }
 
-    public static enum Type {
+    public enum Type {
         ADD_ATTRIBUTE ("Add_Attribute", "addAtt", "attribute"),
         ADD_CODELIST ("Add_Codelist", "addClist", "codelist"),
         ADD_DATATYPE ("Add_Datatype", "addDtype", "subject", "datatype"),

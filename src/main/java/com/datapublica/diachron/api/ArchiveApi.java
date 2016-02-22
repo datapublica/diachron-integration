@@ -1,6 +1,7 @@
 package com.datapublica.diachron.api;
 
 import com.datapublica.diachron.service.ArchiveService;
+import com.datapublica.diachron.service.QualityService;
 import com.datapublica.diachron.service.data.ChangeSetQuery;
 import com.datapublica.diachron.service.data.ChangeSetResponse;
 import com.datapublica.diachron.service.data.DatasetVersion;
@@ -29,6 +30,9 @@ public class ArchiveApi {
 
     @Autowired
     private ArchiveService service;
+    @Autowired
+    private QualityService qualityService;
+
 
     @ResponseBody
     @RequestMapping(value = "/{id}", method = RequestMethod.PUT, consumes = "application/turtle")
@@ -39,7 +43,10 @@ public class ArchiveApi {
             dds = service.createDiachronicDataset(id);
 
         Model diachronModel = converter.convert(new ByteArrayInputStream(body), "ttl", id);
-        return service.putDataset(dds, diachronModel);
+
+        String dsUri = service.putDataset(dds, diachronModel);
+        qualityService.computeQualityMetrics(dsUri, body);
+        return dsUri;
     }
 
 
