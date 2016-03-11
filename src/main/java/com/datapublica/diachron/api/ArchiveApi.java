@@ -22,7 +22,7 @@ import java.util.stream.Collectors;
  *
  */
 @Controller
-@RequestMapping("/archive")
+@RequestMapping("/api/archive")
 public class ArchiveApi {
 
     @Autowired
@@ -61,8 +61,16 @@ public class ArchiveApi {
 
     @ResponseBody
     @RequestMapping(value = "/{id}/quality", method = RequestMethod.GET, produces = "application/json")
-    List<Map<String, Object>> getQuality(@PathVariable String id) throws IOException {
-        return qualityService.getQuality(getDatasets(id).get(0).id);
+    List<Map<String, Object>> getQuality(@PathVariable String id, @RequestParam(required = false) String versionId) throws IOException {
+        List<DatasetVersion> versions = getDatasets(id);
+        DatasetVersion datasetVersion = null;
+        if (versionId != null) {
+            datasetVersion = versions.stream().filter(it -> it.id.equals(versionId)).findFirst().orElse(null);
+        }
+        if (datasetVersion == null) {
+            datasetVersion = versions.get(0);
+        }
+        return qualityService.getQuality(datasetVersion.id);
     }
 
     @ResponseBody
