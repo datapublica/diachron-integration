@@ -31,7 +31,7 @@ public class QualityApi {
     @ResponseBody
     @RequestMapping(value = "/{id}", method = RequestMethod.GET)
     List<Map<String, Object>> save(@PathVariable String id) throws Exception {
-        String uri = "http://www.data-publica.com/lod-test/"+id;
+        String uri = "http://www.data-publica.com/lod/publication/"+id;
         return service.getQuality(uri);
     }
 

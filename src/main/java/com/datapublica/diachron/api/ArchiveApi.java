@@ -1,6 +1,7 @@
 package com.datapublica.diachron.api;
 
 import com.datapublica.diachron.service.ArchiveService;
+import com.datapublica.diachron.service.ChangeService;
 import com.datapublica.diachron.service.QualityService;
 import com.datapublica.diachron.service.data.ChangeSetQuery;
 import com.datapublica.diachron.service.data.ChangeSetResponse;
@@ -13,7 +14,6 @@ import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
 
 import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -33,6 +33,8 @@ public class ArchiveApi {
     @Autowired
     private QualityService qualityService;
 
+    @Autowired
+    private ChangeService changeService;
 
     @ResponseBody
     @RequestMapping(value = "/{id}", method = RequestMethod.PUT, consumes = "application/turtle")
@@ -49,6 +51,19 @@ public class ArchiveApi {
         return dsUri;
     }
 
+    @ResponseBody
+    @RequestMapping(value = "/{id}/changes", method = RequestMethod.POST, produces = "text/plain")
+    String getId(@PathVariable String id, @RequestParam boolean recordset) throws IOException {
+        List<DatasetVersion> versions = service.getDatasetVersions(getId(id));
+        changeService.computeChangeSet(id, versions.get(1), versions.get(0), recordset);
+        return "ok";
+    }
+
+    @ResponseBody
+    @RequestMapping(value = "/{id}/quality", method = RequestMethod.GET, produces = "application/json")
+    List<Map<String, Object>> getQuality(@PathVariable String id) throws IOException {
+        return qualityService.getQuality(getDatasets(id).get(0).id);
+    }
 
     @ResponseBody
     @RequestMapping(value = "/{id}/dds", method = RequestMethod.GET, produces = "text/plain")

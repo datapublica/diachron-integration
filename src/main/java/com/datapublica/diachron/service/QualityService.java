@@ -57,7 +57,7 @@ public class QualityService {
             QualityRequest metrics = new QualityRequest().addMetric("eu.diachron.qualitymetrics.intrinsic.consistency.UsageOfIncorrectDomainOrRangeDatatypes");
             ImmutableMap<String, String> data = ImmutableMap.of("IsSparql", "false", "BaseUri", dsId, "Dataset", tempFile.toAbsolutePath().toString(), "QualityReportRequired", "true", "MetricsConfiguration", om.writeValueAsString(metrics));
 
-            HttpPost request = new HttpPost(config.getIntegrationPlatform());
+            HttpPost request = new HttpPost(config.getQualityBaseUrl());
             HttpUriRequestUtil.setParams(request, data);
             http.execute(request);
 

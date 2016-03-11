@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.ResponseBody;
 
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.stream.Collectors;
@@ -31,7 +32,7 @@ public class SchemaApi {
     @ResponseBody
     @RequestMapping(method = RequestMethod.GET, produces = "application/json")
     public Collection<Dataset> getDatasets() throws IOException {
-        return Collections.singletonList(getDataset("maires"));
+        return Arrays.asList(getDataset("maires"), getDataset("dp"), getDataset("medaillesOG"));
     }
 
     @ResponseBody
