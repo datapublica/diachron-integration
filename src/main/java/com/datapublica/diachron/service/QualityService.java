@@ -54,8 +54,8 @@ public class QualityService {
             fos.write(dataset);
             fos.close();
 
-            QualityRequest metrics = new QualityRequest().addMetric("eu.diachron.qualitymetrics.intrinsic.consistency.UsageOfIncorrectDomainOrRangeDatatypes");
-            ImmutableMap<String, String> data = ImmutableMap.of("IsSparql", "false", "BaseUri", dsId, "Dataset", tempFile.toAbsolutePath().toString(), "QualityReportRequired", "true", "MetricsConfiguration", om.writeValueAsString(metrics));
+            QualityRequest metrics = new QualityRequest().addMetric("eu.diachron.qualitymetrics.datapublica.completeness.DataCubePopulationCompleteness").addMetric("eu.diachron.qualitymetrics.intrinsic.consistency.UsageOfDeprecatedClassesOrProperties");
+            ImmutableMap<String, String> data = ImmutableMap.of("IsSparql", "false", "BaseUri", dsId, "Dataset", tempFile.toAbsolutePath().toString(), "QualityReportRequired", "false", "MetricsConfiguration", om.writeValueAsString(metrics));
 
             HttpPost request = new HttpPost(config.getQualityBaseUrl());
             HttpUriRequestUtil.setParams(request, data);
@@ -84,9 +84,9 @@ public class QualityService {
                 "        ?instance a ?type.\n" +
                 "        ?category_instance a ?category ; \n" +
                 "            ?p ?instance.\n" +
-                "        ?group_instance a ?group; \n" +
-                "            ?p1 ?category_instance.\n" +
-                "        FILTER(STRSTARTS(STR(?p), \"http://www.diachron-fp7.eu/dqm\") && STRSTARTS(STR(?p1), \"http://www.diachron-fp7.eu/dqm\")) \n" +
+                "        OPTIONAL { ?group_instance a ?group; \n" +
+                "            ?p1 ?category_instance. FILTER(STRSTARTS(STR(?p1), \"http://www.diachron-fp7.eu/dqm\")) } \n" +
+                "        FILTER(STRSTARTS(STR(?p), \"http://www.diachron-fp7.eu/dqm\"))\n" +
                 "    }\n" +
                 "}";
         List<Map<String, Object>> result = archive.querySelect(query);
@@ -101,6 +101,8 @@ public class QualityService {
     }
 
     private void replaceDQM(Map<String, Object> it, String attr) {
-        it.put(attr, it.get(attr).toString().replace("http://www.diachron-fp7.eu/dqm#", ""));
+        Object o = it.get(attr);
+        if (o == null) return;
+        it.put(attr, o.toString().replace("http://www.diachron-fp7.eu/dqm#", ""));
     }
 }

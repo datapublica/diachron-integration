@@ -65,11 +65,30 @@ public class ArchiveApi {
         List<DatasetVersion> versions = getDatasets(id);
         DatasetVersion datasetVersion = null;
         if (versionId != null) {
-            datasetVersion = versions.stream().filter(it -> it.id.equals(versionId)).findFirst().orElse(null);
+            String versionUri = ArchiveService.RESOURCE_BASE_URI + versionId.replace(':', '/');
+            datasetVersion = versions.stream().filter(it -> it.id.equals(versionUri)).findFirst().orElse(null);
+
         }
         if (datasetVersion == null) {
             datasetVersion = versions.get(0);
         }
+        return qualityService.getQuality(datasetVersion.id);
+    }
+
+
+    @ResponseBody
+    @RequestMapping(value = "/{id}/quality", method = RequestMethod.POST, consumes = "application/turtle", produces = "application/json")
+    List<Map<String, Object>> computeQuality(@RequestBody byte[] body, @PathVariable String id, @RequestParam(required = false) String versionId) throws IOException {
+        List<DatasetVersion> versions = getDatasets(id);
+        DatasetVersion datasetVersion = null;
+        if (versionId != null) {
+            String versionUri = ArchiveService.RESOURCE_BASE_URI + versionId.replace(':', '/');
+            datasetVersion = versions.stream().filter(it -> it.id.equals(versionUri)).findFirst().orElse(null);
+        }
+        if (datasetVersion == null) {
+            datasetVersion = versions.get(0);
+        }
+        qualityService.computeQualityMetrics(datasetVersion.id, body);
         return qualityService.getQuality(datasetVersion.id);
     }
 

@@ -56,7 +56,7 @@ public class SchemaApi {
 
     private String shortenId(String uri)  {
         return uri.replace(ArchiveService.RESOURCE_BASE_URI, "")
-                .replaceAll("\\/", ":");
+                .replaceAll("/", ":");
     }
 
     private Object getModel(String id) throws IOException {
